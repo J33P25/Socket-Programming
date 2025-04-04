@@ -1,39 +1,33 @@
 import socket
-import threading
 
-# Choosing Nickname
-nickname = input("Choose your nickname: ")
+# Client Configuration
+SERVER_HOST = 'localhost'
+SERVER_PORT = 8080
 
-# Connecting To Server
-client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-client.connect(('127.0.0.1', 56789))
+def main():
+    # Prompt the user for the resource
+    resource = input("Enter the resource to request (e.g., /index.html, /about.html, /datetime): ")
 
-# Listening to Server and Sending Nickname
-def receive():
-    while True:
-        try:
-            # Receive Message From Server
-            # If 'NICK' Send Nickname
-            message = client.recv(1024).decode('ascii')
-            if message == 'NICK':
-                client.send(nickname.encode('ascii'))
-            else:
-                print(message)
-        except:
-            # Close Connection When Error
-            print("An error occured!")
-            client.close()
-            break
+    # Create a socket
+    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    client_socket.connect((SERVER_HOST, SERVER_PORT))
 
-# Sending Messages To Server
-def write():
-    while True:
-        message = '{}: {}'.format(nickname, input(''))
-        client.send(message.encode('ascii'))
+    # Handle GET or POST requests
+    if resource == "/submit_form":
+        data = input("Enter form data to submit (e.g., name=John&age=30): ")
+        post_request = f"POST {resource} HTTP/1.1\r\nHost: {SERVER_HOST}\r\nContent-Length: {len(data)}\r\n\r\n{data}"
+        client_socket.sendall(post_request.encode())
+        response = client_socket.recv(4096).decode('utf-8')
+        print("Server Response:\n", response)
+    else:
+        # Send GET Request
+        request = f"GET {resource} HTTP/1.1\r\nHost: {SERVER_HOST}\r\n\r\n"
+        client_socket.sendall(request.encode())
+        response = client_socket.recv(4096).decode('utf-8')
+        print("Server Response:\n", response)
 
-# Starting Threads For Listening And Writing
-receive_thread = threading.Thread(target=receive)
-receive_thread.start()
+    # Close the connection
+    client_socket.close()
 
-write_thread = threading.Thread(target=write)
-write_thread.start()
+if __name__ == "__main__":
+    main()
